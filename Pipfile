@@ -6,6 +6,10 @@ name = "pypi"
 [packages]
 django = "*"
 gunicorn = "*"
+djangorestframework = "*"
+django-cors-headers = "*"
+requests = "*"
+redis = "*"
 
 [dev-packages]
 black = "*"
