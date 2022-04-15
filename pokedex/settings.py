@@ -30,6 +30,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # custom app
+    "pokemon.apps.PokemonConfig",
+    # third-party apps
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -114,3 +118,16 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REDIS_HOST = "localhost"
+
+REDIS_PORT = 6379
+
+POKEMON_API_URL = "https://pokeapi.co/api/v2/pokemon-species/"
+
+SHAKESPEARE_TRANSLATION_API = (
+    "https://api.funtranslations.com/translate/shakespeare.json"
+)
+
+"https://api.funtranslations.com/translate/shakespeare.json?tex"
+YODA_TRANSLATION_API = "https://api.funtranslations.com/translate/yoda.json"
