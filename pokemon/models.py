@@ -2,6 +2,7 @@ import json
 import logging
 import random
 from typing import Any, Dict, List
+from urllib import parse
 
 from django.conf import settings
 import redis
@@ -11,7 +12,7 @@ import requests
 from pokemon.services import make_request
 
 
-REDIS_CLIENT = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
+RedisClient = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -25,17 +26,21 @@ class Pokemon:
         habitat: str,
         isLegendary: bool,
         translation: str = None,
+        redis_client: redis.Redis = RedisClient,
     ) -> None:
         self.name = name
         self.description = description
         self.habitat = habitat
         self.isLegendary = isLegendary
         self.translation = translation
+        self.redis_client = redis_client
 
     @property
     def is_yoda_translation(self):
         logging.info("getting translation type")
         return self.habitat == "cave" or self.isLegendary
+
+    
 
     @staticmethod
     def get_remote_pokemon(name):
@@ -59,7 +64,7 @@ class Pokemon:
         url = settings.SHAKESPEARE_TRANSLATION_API
         if translation_type == "yoda":
             settings.YODA_TRANSLATION_API
-        endpoint = f"{url}?text={description}"
+        endpoint = f"{url}?text={parse.quote(description)}"
         logging.info(endpoint)
         try:
             translation_json = make_request(f"{url}?text={description}")
@@ -67,12 +72,13 @@ class Pokemon:
                 raise requests.exceptions.HTTPError("An error occurred")
             result = translation_json["contents"]["translated"]
         except:
+            logging.info("An error occurred")
             result = None
 
         return result
 
     @classmethod
-    def retrieve_description(cls, descriptions: List[Dict[str, str]]):
+    def retrieve_description(cls, descriptions: List[Dict[str, str]]) -> str:
         """
         Retrieve the description from the list of descriptions.
         """
@@ -120,16 +126,19 @@ class Pokemon:
         """
         Save the pokemon to Redis.
         """
-        logging.info("getting save pokemon")
-        REDIS_CLIENT.set(self.name, json.dumps(self.pokemon_to_dict()))
+        logging.info("Saving pokemon to DB")
+        self.redis_client.set(
+            self.name,
+            json.dumps(self.pokemon_to_dict())
+        )
 
     @classmethod
-    def get(cls, name):
+    def get(cls, name, redis_client=RedisClient):
         """
         Retrieve pokemon
         """
         logging.info("getting pokemon")
-        redis_pokemon = REDIS_CLIENT.get(name)
+        redis_pokemon = redis_client.get(name)
         if not redis_pokemon:
             return cls.create_pokemon_from_remote(name)
         return Pokemon(**json.loads(redis_pokemon))
@@ -161,19 +170,22 @@ class Pokemon:
 
         return result
 
-    def pokemon_from_json(self, json_data):
+    @classmethod
+    def pokemon_from_json(cls, json_data):
         """
         Create the pokemon from a dictionary.
         """
         logging.info("getting pokemon form json")
-        self.name = json_data["name"]
-        self.description = json_data["description"]
-        self.habitat = json_data["habitat"]
-        self.isLegendary = json_data["isLegendary"]
+        pokemon = cls(
+            name=json_data["name"],
+            description=json_data["description"],
+            habitat=json_data["habitat"],
+            isLegendary=json_data["is_legendary"]
+        )
         if "translation" in json_data:
-            self.translation = json_data["translation"]
+            pokemon.translation = json_data["translation"]
 
-        return self
+        return pokemon
 
     def translate_description(self):
         """
@@ -185,6 +197,6 @@ class Pokemon:
         if self.is_yoda_translation:
             self.translation = self.get_translation(self.description, "yoda")
         else:
-            self.translation = self.translation = self.get_translation(
+            self.translation = self.get_translation(
                 self.description, "shakespeare"
             )
