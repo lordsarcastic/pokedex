@@ -24,7 +24,6 @@ ALLOWED_HOSTS = get_env_with_context("ALLOWED_HOSTS", default="*").split(" ")
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -119,7 +118,7 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-REDIS_HOST = "localhost"
+REDIS_HOST = get_env_with_context("HOST", default="localhost", context="REDIS")
 
 REDIS_PORT = 6379
 
@@ -129,5 +128,4 @@ SHAKESPEARE_TRANSLATION_API = (
     "https://api.funtranslations.com/translate/shakespeare.json"
 )
 
-"https://api.funtranslations.com/translate/shakespeare.json?tex"
 YODA_TRANSLATION_API = "https://api.funtranslations.com/translate/yoda.json"
