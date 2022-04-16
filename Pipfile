@@ -10,6 +10,7 @@ djangorestframework = "*"
 django-cors-headers = "*"
 requests = "*"
 redis = "*"
+mock = "*"
 
 [dev-packages]
 black = "*"
