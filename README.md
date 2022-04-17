@@ -40,7 +40,7 @@ This is because, Django expects us to use an actual database which should be plu
 The application is made up of two routes which does the job of retrieving a Pokemon's detail, and a tranlation of a Pokemon's detail:
 
 ### The Pokemon detail endpoint
- `GET /pokemon/<pokemon name>/` -> Retrieve a pokemon details in the form:
+ `GET /pokemon/<pokemon_name>/` -> Retrieve a pokemon details in the form:
 ```json
 {
     "name": "charmander",
@@ -55,15 +55,16 @@ If a pokemon does not exist, it returns:
     "detail": "Pokemon not found"
 }
 ```
-with a status of `404`
+with a status code of `404`
 ### The Pokemon translation endpoint
-`GET /pokemon/translated/<pokemon name>`:  Retrieve a Pokemon details whilst translating the description either to a Yoda form or a Shakespeare form. A typical response looks like so:
+`GET /pokemon/translated/<pokemon_name>`:  Retrieve a Pokemon details whilst translating the description either to a Yoda form or a Shakespeare form. A typical response looks like so:
 ```json
 {
     "name": "charmander",
     "description": "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out.",
     "habitat": "mountain",
-    "isLegendary": false
+    "isLegendary": false,
+    "translation": "Yoda"
 }
 ```
 
@@ -81,8 +82,8 @@ Oh well, Django is a favourite framework of mine and while I could have used Fla
 ### Choice of Database
 I choose Redis for the purpose of caching requests. Since Pokemon information doesn't and rarely changes, once a user has requested for an info, it can as well be cached to reduce network calls subsequently. This improves speed of the application
 
-### Improvements
-- Write tests with attention to non-framework specific features.
+### Improvements for a production API
+- The translation API tends to return a 404 response when the rate limiting is activated. In production, it is better to proxy requests through a service that would modify server's fingerprint and enable more requests to be allowed. Or simply pay for premium service.
 
 ## Licence 🔐
 [MIT licensed](/LICENSE) © [Ayodeji Adeoti](https://github.com/Lord-sarcatic)
