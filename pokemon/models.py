@@ -35,19 +35,12 @@ class Pokemon:
         self.translation = translation
         self.redis_client = redis_client
 
-    @property
-    def is_yoda_translation(self):
-        logging.info("getting translation type")
-        return self.habitat == "cave" or self.isLegendary
-
-    
-
     @staticmethod
     def get_remote_pokemon(name):
         """
         Get the pokemon from the remote API.
         """
-        logging.info("getting remote pokemon")
+        logging.info(f"Getting remote pokemon: {name}")
         try:
             pokemon_details = make_request(settings.POKEMON_API_URL + name)
         except requests.exceptions.HTTPError:
@@ -60,19 +53,17 @@ class Pokemon:
         """
         Get the shakespeare translation of the pokemon description.
         """
-        logging.info("getting translation")
+        logging.info("Getting remote translation for pokemon")
         url = settings.SHAKESPEARE_TRANSLATION_API
         if translation_type == "yoda":
-            settings.YODA_TRANSLATION_API
-        endpoint = f"{url}?text={parse.quote(description)}"
-        logging.info(endpoint)
+            url = settings.YODA_TRANSLATION_API
+
         try:
-            translation_json = make_request(f"{url}?text={description}")
-            if not translation_json.get("success").get("total") < 1:
-                raise requests.exceptions.HTTPError("An error occurred")
+            translation_json = make_request(url, params={"text": description})
+            logging.info("Translation json: %s", translation_json)
             result = translation_json["contents"]["translated"]
-        except:
-            logging.info("An error occurred")
+        except Exception as e:
+            logging.info(f"An error occurred: {e}")
             result = None
 
         return result
@@ -82,7 +73,7 @@ class Pokemon:
         """
         Retrieve the description from the list of descriptions.
         """
-        logging.info("getting description")
+        logging.info("Parsing data for description")
         english_descriptions = filter(
             lambda desc: desc["language"]["name"] == cls.POKEMON_LANGUAGE_KEY,
             descriptions,
@@ -96,7 +87,7 @@ class Pokemon:
         """
         Create the pokemon from the remote API.
         """
-        logging.info("getting pokemon from remote")
+        logging.info("Creating pokemon from remote data")
         pokemon_details = cls.get_remote_pokemon(name)
         if not pokemon_details:
             return None
@@ -109,45 +100,66 @@ class Pokemon:
         """
         Convert the remote API data to a pokemon.
         """
-        logging.info("getting creating pokemon")
+        logging.info("Creating pokemon from dictionary")
         pokemon = dict()
         pokemon["name"] = pokemon_data["name"]
         pokemon["description"] = cls.retrieve_description(
             pokemon_data["flavor_text_entries"]
         )
-        pokemon["habitat"] = pokemon_data.get("habitat").get("name") or ""
+        pokemon["habitat"] = ""
+        if pokemon_data["habitat"]:
+            pokemon["habitat"] = pokemon_data["habitat"]["name"]
         pokemon["isLegendary"] = pokemon_data["is_legendary"]
         if translation := pokemon_data.get("translation"):
             pokemon["translation"] = translation
 
         return Pokemon(**pokemon)
 
-    def save(self):
-        """
-        Save the pokemon to Redis.
-        """
-        logging.info("Saving pokemon to DB")
-        self.redis_client.set(
-            self.name,
-            json.dumps(self.pokemon_to_dict())
-        )
-
     @classmethod
     def get(cls, name, redis_client=RedisClient):
         """
         Retrieve pokemon
         """
-        logging.info("getting pokemon")
+        logging.info("Retrieving pokemon from DB")
         redis_pokemon = redis_client.get(name)
         if not redis_pokemon:
             return cls.create_pokemon_from_remote(name)
         return Pokemon(**json.loads(redis_pokemon))
 
+    @classmethod
+    def pokemon_from_json(cls, json_data):
+        """
+        Create the pokemon from a dictionary.
+        """
+        logging.info("Creating pokemon from JSON")
+        pokemon = cls(
+            name=json_data["name"],
+            description=json_data["description"],
+            habitat=json_data["habitat"],
+            isLegendary=json_data["is_legendary"],
+        )
+        if "translation" in json_data:
+            pokemon.translation = json_data["translation"]
+
+        return pokemon
+
+    @property
+    def is_yoda_translation(self):
+        logging.info(f"Getting translation type for pokemon: {self.name}")
+        return self.habitat == "cave" or self.isLegendary
+
+    def save(self):
+        """
+        Save the pokemon to Redis.
+        """
+        logging.info("Saving pokemon to DB")
+        self.redis_client.set(self.name, json.dumps(self.pokemon_to_dict()))
+
     def pokemon_to_dict(self):
         """
         Convert the pokemon to a dictionary.
         """
-        logging.info("getting pokemon into dict")
+        logging.info(f"Converting pokemon: {self.name} into dict")
         result = {
             "name": self.name,
             "description": self.description,
@@ -159,44 +171,35 @@ class Pokemon:
 
         return result
 
-    def serialize(self):
-        logging.info("getting serializerd pokemon")
+    def serialize(self, translate=False):
+        logging.info(f"Serializing pokemon: {self.name}")
         result = {
             "name": self.name,
-            "description": self.translation or self.description,
             "habitat": self.habitat,
+            "description": self.description,
             "isLegendary": self.isLegendary,
         }
+        if translate:
+            logging.info(f"Translating pokemon {self.name}")
+            result["description"] = self.translation or self.description
+            result["translation"] = (
+                "Yoda" if self.is_yoda_translation else "Shakespeare"
+            )
+
+        logging.info(f"Serialized pokemon: {result}")
 
         return result
-
-    @classmethod
-    def pokemon_from_json(cls, json_data):
-        """
-        Create the pokemon from a dictionary.
-        """
-        logging.info("getting pokemon form json")
-        pokemon = cls(
-            name=json_data["name"],
-            description=json_data["description"],
-            habitat=json_data["habitat"],
-            isLegendary=json_data["is_legendary"]
-        )
-        if "translation" in json_data:
-            pokemon.translation = json_data["translation"]
-
-        return pokemon
-
+    
     def translate_description(self):
         """
         Translate the pokemon description.
         """
-        logging.info("getting pokemon description tranlation")
+        logging.info(f"Translating pokemon, {self.name} description")
         if self.translation:
             return
         if self.is_yoda_translation:
+            logging.info("Translating pokemon to Yoda")
             self.translation = self.get_translation(self.description, "yoda")
         else:
-            self.translation = self.get_translation(
-                self.description, "shakespeare"
-            )
+            logging.info("Translating pokemon to Shakespeare")
+            self.translation = self.get_translation(self.description, "shakespeare")

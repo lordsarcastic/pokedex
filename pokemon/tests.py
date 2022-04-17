@@ -72,6 +72,7 @@ class PokemonRetrieveViewTest(APITestCase):
         self.assertIn("is_legendary", pokemon)
 
     def test_get_shakespeare_translation_will_return_translation_from_remote(self):
+        translation = "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out."
         with patch("pokemon.models.requests.get") as mock_get:
             mock_get.return_value.json.return_value = {
                 "success": {"total": 1},
@@ -81,13 +82,12 @@ class PokemonRetrieveViewTest(APITestCase):
                     "translation": "shakespeare",
                 },
             }
-            pokemon = Pokemon.get_remote_pokemon("Pikachu")
+            pokemon = Pokemon.get_translation(translation, "shakespeare")
 
-        self.assertIn("success", pokemon)
-        self.assertIn("contents", pokemon)
-        self.assertEqual("shakespeare", pokemon["contents"]["translation"])
+        self.assertEqual(pokemon, translation)
 
     def test_get_yoda_translation_will_return_translation(self):
+        translation = "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out."
         with patch("pokemon.models.requests.get") as mock_get:
             mock_get.return_value.json.return_value = {
                 "success": {"total": 1},
@@ -97,11 +97,9 @@ class PokemonRetrieveViewTest(APITestCase):
                     "translation": "yoda",
                 },
             }
-            pokemon = Pokemon.get_remote_pokemon("Pikachu")
+            pokemon = Pokemon.get_translation(translation, "yoda")
 
-        self.assertIn("success", pokemon)
-        self.assertIn("contents", pokemon)
-        self.assertIn("yoda", pokemon["contents"]["translation"])
+        self.assertEqual(translation, pokemon)
 
     def test_retrieve_description_will_pull_out_description_from_api_response(self):
         with patch("pokemon.models.requests.get") as mock_get:
@@ -344,69 +342,84 @@ class PokemonRetrieveViewTest(APITestCase):
             pokemon.serialize(),
             {
                 "name": "Pikachu",
-                "description": "Un ratón electrico adorable",
+                "description": "A cute electric mouse",
                 "habitat": "cave",
                 "isLegendary": False,
             }
         )
 
-    # def test_translate_pokemon_description_will_mutate_translation(self):
-    #     with patch("pokemon.models.requests.get") as mock_get:
-    #         mock_get.return_value.json.return_value = {
-    #             "success": {"total": 1},
-    #             "contents": {
-    #                 "translated": "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out.",
-    #                 "text": "From the time it is born, a flame burns at the tip of its tail. Its life would end if the flame were to go out.",
-    #                 "translation": "shakespeare",
-    #             },
-    #         }
-    #         pokemon = Pokemon.pokemon_from_json(
-    #             {
-    #                 "name": "Pikachu",
-    #                 "description": "A cute electric mouse",
-    #                 "habitat": "cave",
-    #                 "is_legendary": False,
-    #             }
-    #         )
-    #         print(pokemon.description)
-    #         print(pokemon.translation)
-    #         pokemon.translate_description()
-    #         self.assertEqual(
-    #             pokemon.translation,
-    #             "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out.",
-    #         )
+    def test_translated_pokemon_serialize_will_yield_api_valid_pokemon(self):
+        pokemon = Pokemon.pokemon_from_json(
+            {
+                "name": "Pikachu",
+                "description": "A cute electric mouse",
+                "habitat": "cave",
+                "is_legendary": False,
+            }
+        )
+        self.assertEqual(
+            pokemon.serialize(),
+            {
+                "name": "Pikachu",
+                "description": "A cute electric mouse",
+                "habitat": "cave",
+                "isLegendary": False,
+            },
+        )
+        pokemon = Pokemon.pokemon_from_json(
+            {
+                "name": "Pikachu",
+                "description": "A cute electric mouse",
+                "habitat": "cave",
+                "is_legendary": False,
+                "translation": "Un ratón electrico adorable",
+            }
+        )
+        self.assertEqual(
+            pokemon.serialize(translate=True),
+            {
+                "name": "Pikachu",
+                "description": "Un ratón electrico adorable",
+                "habitat": "cave",
+                "isLegendary": False,
+                "translation": "Yoda",
+            }
+        )
 
-    # def test_get_pokemon_not_found(self):
-    #     with patch("pokemon.models.requests.get") as mock_get:
-    #         mock_get.return_value.json.return_value = {
-    #             "name": "Pikachu",
-    #             "flavor_text_entries": [
-    #                 {
-    #                     "language": {"name": "en"},
-    #                     "flavor_text": "A cute electric mouse",
-    #                 },
-    #                 {
-    #                     "language": {"name": "es"},
-    #                     "flavor_text": "Un ratón electrico adorable",
-    #                 },
-    #             ],
-    #             "habitat": {
-    #                 "name": "cave",
-    #                 "url": "https://pokeapi.co/api/v2/growth-rate/4/"
-    #             },
-    #             "is_legendary": False,
-    #         }
+    def test_translate_pokemon_description_will_mutate_translation(self):
+        with patch("pokemon.models.requests.get") as mock_get:
+            mock_get.return_value.json.return_value = {
+                "success": {"total": 1},
+                "contents": {
+                    "translated": "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out.",
+                    "text": "From the time it is born, a flame burns at the tip of its tail. Its life would end if the flame were to go out.",
+                    "translation": "shakespeare",
+                },
+            }
+            pokemon = Pokemon.pokemon_from_json(
+                {
+                    "name": "Pikachu",
+                    "description": "A cute electric mouse",
+                    "habitat": "cave",
+                    "is_legendary": False,
+                }
+            )
 
-    #         response = self.client.get("/pokemon/non-existent")
-    #     print(response.data)
-    #     self.assertEqual(response.status_code, 404)
-    #     self.assertEqual(response.data, {"detail": "Pokemon not found"})
+            pokemon.translate_description()
+            self.assertEqual(
+                pokemon.translation,
+                "From the time 't is born,  a flame burns at the tip of its tail. Its life would end if 't be true the flame wast to wend out.",
+            )
 
-    # def test_get_pokemon_found(self):
-    #     response = self.client.get("/pokemon/bulbasaur")
-    #     print(response.data)
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertIn("name", response.data)
-    #     self.assertIn("description", response.data)
-    #     self.assertIn("habitat", response.data)
-    #     self.assertIn("isLegendary", response.data)
+    def test_get_pokemon_not_found(self):
+        response = self.client.get("/pokemon/non-existent/")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.data, {"detail": "Pokemon not found"})
+
+    def test_get_pokemon_found(self):
+        response = self.client.get("/pokemon/bulbasaur/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("name", response.data)
+        self.assertIn("description", response.data)
+        self.assertIn("habitat", response.data)
+        self.assertIn("isLegendary", response.data)
