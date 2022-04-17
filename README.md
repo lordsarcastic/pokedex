@@ -25,12 +25,12 @@ Running this service locally requires you to install Python and Redis. Install b
     - Create a `.env` file using the [.env.example](/.env.example) file as a template. Ensure to fill in appropriate values. The `DJANGO_ALLOWED_HOSTS` variable refers to the domain host you'll be running this app on.
     - Run `pipenv install` to install all necessary dependencies for the server application in a virtual environment.
     - Run `pipenv shell` to activate the virtual environment.
-    - Run the server with `python manage.py runserver`. It should be running on port 8000.
+    - Run the server with `python manage.py runserver`. It should be running on port 5000.
 
 ### Docker
 If you've got Docker installed, edit the `.docker.env` file to your taste (you wouldn't need to except you hate me), then run `docker-compose build` and `docker-compose up -d` to spin up the server.
 
-The application should be running on port `5000` at URL: `localhost:8000`.
+The application should be running on port `5000` at URL: `localhost:5000`.
 
 Note you're very likely to see this screen after running the `python manage.py runserver` command:
 
