@@ -28,7 +28,7 @@ Running this service locally requires you to install Python and Redis. Install b
     - Run the server with `python manage.py runserver`. It should be running on port 8000.
 
 ### Docker
-If you've got Docker installed, just run `docker-compose build` and `docker-compose up -d` to spin up the server.
+If you've got Docker installed, edit the `.docker.env` file to your taste (you wouldn't need to except you hate me), then run `docker-compose build` and `docker-compose up -d` to spin up the server.
 
 The application should be running on port `5000` at URL: `localhost:8000`.
 
