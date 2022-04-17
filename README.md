@@ -33,6 +33,7 @@ If you've got Docker installed, edit the `.docker.env` file to your taste (you w
 The application should be running on port `5000` at URL: `localhost:5000`.
 
 Note you're very likely to see this screen after running the `python manage.py runserver` command:
+<img width="908" alt="Screenshot 2022-04-17 at 07 24 18" src="https://user-images.githubusercontent.com/33290249/163703305-c744debc-e645-4f67-ae57-a799e9cefa26.png">
 
 This is because, Django expects us to use an actual database which should be plugged in via on of Django's interfaces. Migrations are usually run to create database tables but since we're making use of Redis, we don't need any of that. So, we can conveniently ignore the warnings.
 
